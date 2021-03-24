@@ -1,2 +1,5 @@
 build
 .idea
+cmake-build-debug
+gcc_x64_debug
+gcc_x64_release
