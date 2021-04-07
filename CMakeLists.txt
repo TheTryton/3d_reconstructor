@@ -26,7 +26,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
     ${data_processor_includes} ${data_processor_sources} ${data_processor_uis})
 
 add_executable(data_processor
-        ${data_processor_includes} ${data_processor_sources} ${data_processor_uis} src/cgal.cpp include/cgal.h src/opencv.cpp include/opencv.h)
+        ${data_processor_includes} ${data_processor_sources} ${data_processor_uis} src/cgal.cpp include/cgal.h src/opencv.cpp include/opencv.h src/vertexDetection.cpp include/vertexDetection.h)
 target_include_directories(data_processor PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/build/

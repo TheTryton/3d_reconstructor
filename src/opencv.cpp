@@ -11,6 +11,7 @@
 #include "opencv2/highgui.hpp"
 #include <iostream>
 #include <ctype.h>
+
 using namespace cv;
 using namespace std;
 Mat image;
@@ -21,6 +22,7 @@ bool showHist = true;
 Point origin;
 Rect selection;
 int vmin = 10, vmax = 256, smin = 30;
+
 // User draws box around object to track. This triggers CAMShift to start tracking
 static void onMouse( int event, int x, int y, int, void* )
 {
