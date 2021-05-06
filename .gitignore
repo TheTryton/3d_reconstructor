@@ -1,5 +1,7 @@
 build
 .idea
 cmake-build-debug
+cmake-build-debug-mingw
+cmake-build-release
 gcc_x64_debug
 gcc_x64_release

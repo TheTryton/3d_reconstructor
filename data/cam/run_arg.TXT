@@ -1,0 +1,1 @@
+-w=9 -h=6 -o=output_camera.yml -op -oe -oo -s=0.0242 image_list.xml

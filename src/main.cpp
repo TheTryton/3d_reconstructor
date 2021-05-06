@@ -1,8 +1,9 @@
 
 #include <vertexDetection.h>
 #include <disparityMap.h>
+#include <cameraCalibration.h>
 
-#define CAMERA "http://192.168.0.111:81/stream" // 0 (for local Webcam)
+#define CAMERA "http://192.168.1.114:81/stream" // 0 (for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -14,6 +15,8 @@
 
 int main(int argc, char* argv[])
 {
+//    mainCalibration(argc,argv);
+
     cv::VideoCapture camera;
     camera.open(CAMERA);
     cv::namedWindow(VERTEX_WINDOW, 0);
