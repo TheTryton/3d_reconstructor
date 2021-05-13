@@ -4,7 +4,7 @@
 #include <cameraCalibration.h>
 #include <map>
 
-#define CAMERA  0 //"http://192.168.1.114:81/stream" (for local Webcam)
+#define CAMERA  "http://192.168.1.112:81/stream" //(for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"

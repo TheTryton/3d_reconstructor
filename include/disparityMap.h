@@ -18,6 +18,9 @@
 #include <fstream>
 #include <map>
 
-cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right,  std::map<std::string, int>& params);
+cv::Mat disparity_map(const cv::Mat& frame_left,
+                      const cv::Mat& frame_right,
+                      std::map<std::string, int>& params,
+                      const cv::Rect roi = cv::Rect(0,0,0,0));
 
 #endif //DATA_PROCESSOR_DISPARITYMAP_H
