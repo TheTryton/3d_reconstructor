@@ -2,8 +2,9 @@
 #include <vertexDetection.h>
 #include <disparityMap.h>
 #include <cameraCalibration.h>
+#include <map>
 
-#define CAMERA "http://192.168.1.114:81/stream" // 0 (for local Webcam)
+#define CAMERA  0 //"http://192.168.1.114:81/stream" (for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -16,6 +17,7 @@
 int main(int argc, char* argv[])
 {
 //    mainCalibration(argc,argv);
+    std::map<std::string, int> params;
 
     cv::VideoCapture camera;
     camera.open(CAMERA);
@@ -35,7 +37,18 @@ int main(int argc, char* argv[])
             frame_right.copyTo(frame_left);
             frame.copyTo(frame_right);
             vertices_frame = vertex_detection(frame);
-            disparity_frame = disparity_map(frame_left, frame_right);
+            disparity_frame = disparity_map(frame_left, frame_right, params);
+
+            cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterCap"], 256, 0 );
+            cv::createTrackbar( "NumDisparities", VERTEX_WINDOW, &params["numDisparities"], 256, 0 );
+            cv::createTrackbar( "BlockSize", VERTEX_WINDOW, &params["blockSize"], 256, 0 );
+            cv::createTrackbar( "FilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
+            cv::createTrackbar( "MinDisparity", VERTEX_WINDOW, &params["minDisparity"], 256, 0 );
+            cv::createTrackbar( "TextureThreshold", VERTEX_WINDOW, &params["textureThreshold"], 256, 0 );
+            cv::createTrackbar( "UniquenessRatio", VERTEX_WINDOW, &params["uniquenessRatio"], 256, 0 );
+            cv::createTrackbar( "SpeckleWindowSize", VERTEX_WINDOW, &params["speckleWindowSize"], 256, 0 );
+            cv::createTrackbar( "SpeckleRange", VERTEX_WINDOW, &params["speckleRange"], 256, 0 );
+//            cv::createTrackbar( "Roi1", DISPARITY_TEST, &params["roi1"], 256, 0 );
 
             cv::imshow(VERTEX_WINDOW, vertices_frame);
             cv::imshow(DISPARITY_TEST, disparity_frame);

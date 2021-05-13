@@ -16,7 +16,8 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include <iostream>
 #include <fstream>
+#include <map>
 
-cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right);
+cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right,  std::map<std::string, int>& params);
 
 #endif //DATA_PROCESSOR_DISPARITYMAP_H
