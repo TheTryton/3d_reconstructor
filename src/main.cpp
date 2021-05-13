@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
             frame_left, frame_right;
 
     params["numDisparities"] = 1;
-    params["blockSize"] = 25;
+    params["blockSize"] = 10;
     params["filterSize"] = 15;
     params["filterCap"] = 20;
     params["minDisparity"] = 0;
@@ -80,11 +80,6 @@ int main(int argc, char* argv[])
             frame_right.copyTo(frame_left);
             frame.copyTo(frame_right);
 
-            if( select && roi.width > 0 && roi.height > 0 ){
-                cv::Mat select_rectangle(frame, roi);
-                bitwise_not(select_rectangle, select_rectangle);
-            }
-
             vertices_frame = vertex_detection(frame);
             disparity_frame = apply_roi ?
                               disparity_map(frame_left, frame_right, params, roi) :
@@ -101,10 +96,15 @@ int main(int argc, char* argv[])
             cv::createTrackbar( "SpeckleWindowSize", VERTEX_WINDOW, &params["speckleWindowSize"], 256, 0 );
             cv::createTrackbar( "SpeckleRange", VERTEX_WINDOW, &params["speckleRange"], 256, 0 );
 
+            if( (select || apply_roi) && roi.width > 0 && roi.height > 0 ){
+                cv::Mat select_rectangle(frame, roi);
+                bitwise_not(select_rectangle, select_rectangle);
+            }
+
             cv::imshow(VERTEX_WINDOW, vertices_frame);
             cv::imshow(DISPARITY_TEST, disparity_frame);
             cv::imshow(LEFT, frame_left);
-            cv::imshow(RIGHT, frame_right);
+            cv::imshow(RIGHT, frame);
         }
         frame_counter++;
 

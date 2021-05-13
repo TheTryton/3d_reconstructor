@@ -25,7 +25,7 @@ cv::Mat disparity_map(const cv::Mat& frame_left,
 
     cv::cvtColor(g1, g1, cv::COLOR_BGR2GRAY);
     cv::cvtColor(g2, g2, cv::COLOR_BGR2GRAY);
-    auto sbm = cv::StereoBM::create(16 * params["numDisparities"], params["blockSize"]);    // TODO: dynamic parametrization - toolbars and stuff
+    auto sbm = cv::StereoBM::create(16 * params["numDisparities"], 2*params["blockSize"]+5);    // TODO: dynamic parametrization - toolbars and stuff
 //    auto sbm = cv::StereoBM::create(80, 5);
 //
     sbm->setPreFilterSize(params["filterSize"]);
