@@ -4,7 +4,7 @@
 #include <cameraCalibration.h>
 #include <map>
 
-#define CAMERA  "http://192.168.1.112:81/stream" //(for local Webcam)
+#define CAMERA  0// "http://192.168.1.112:81/stream" //(for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -12,13 +12,13 @@
 #define LEFT "Left"
 #define RIGHT "Right"
 
-#define FRAME_SKIP 30
+#define FRAME_SKIP 5
 
 cv::Rect roi;
 cv::Point origin;
-cv::Mat frameSize;
+cv::Mat frame_size;
 bool select;
-bool applyRoi = false;
+bool apply_roi = false;
 
 // User draws box around object to track. This triggers CAMShift to start tracking
 static void onMouse( int event, int x, int y, int, void* ) {
@@ -27,7 +27,7 @@ static void onMouse( int event, int x, int y, int, void* ) {
         roi.y = MIN(y, origin.y);
         roi.width = std::abs(x - origin.x);
         roi.height = std::abs(y - origin.y);
-        roi &= cv::Rect(0, 0, frameSize.cols, frameSize.rows);
+        roi &= cv::Rect(0, 0, frame_size.cols, frame_size.rows);
     }
     switch( event )
     {
@@ -35,12 +35,12 @@ static void onMouse( int event, int x, int y, int, void* ) {
             origin = cv::Point(x,y);
             roi  = cv::Rect(x,y,0,0);
             select = true;
-            applyRoi = false;
+            apply_roi = false;
             break;
         case cv::EVENT_LBUTTONUP:
             select = false;
             if( roi.width > 0 && roi.height > 0 )
-                applyRoi = true;
+                apply_roi = true;
             break;
     }
 }
@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
     params["speckleRange"] = 0;
 
     camera >> frame_right;
+    frame_right.copyTo(frame_size);
 
     int frame_counter = 0;
     for(;;){
@@ -78,11 +79,16 @@ int main(int argc, char* argv[])
             camera >> frame;
             frame_right.copyTo(frame_left);
             frame.copyTo(frame_right);
+
+            if( select && roi.width > 0 && roi.height > 0 ){
+                cv::Mat select_rectangle(frame, roi);
+                bitwise_not(select_rectangle, select_rectangle);
+            }
+
             vertices_frame = vertex_detection(frame);
-            std::cout << roi << '\n';
-            disparity_frame = applyRoi ?
-                    disparity_map(frame_left, frame_right, params, roi) :
-                    disparity_map(frame_left, frame_right, params);
+            disparity_frame = apply_roi ?
+                              disparity_map(frame_left, frame_right, params, roi) :
+                              disparity_map(frame_left, frame_right, params);
 
             cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
             cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
