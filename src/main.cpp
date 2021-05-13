@@ -14,6 +14,37 @@
 
 #define FRAME_SKIP 30
 
+cv::Rect roi;
+cv::Point origin;
+cv::Mat frameSize;
+bool select;
+bool applyRoi = false;
+
+// User draws box around object to track. This triggers CAMShift to start tracking
+static void onMouse( int event, int x, int y, int, void* ) {
+    if (select){
+        roi.x = MIN(x, origin.x);
+        roi.y = MIN(y, origin.y);
+        roi.width = std::abs(x - origin.x);
+        roi.height = std::abs(y - origin.y);
+        roi &= cv::Rect(0, 0, frameSize.cols, frameSize.rows);
+    }
+    switch( event )
+    {
+        case cv::EVENT_LBUTTONDOWN:
+            origin = cv::Point(x,y);
+            roi  = cv::Rect(x,y,0,0);
+            select = true;
+            applyRoi = false;
+            break;
+        case cv::EVENT_LBUTTONUP:
+            select = false;
+            if( roi.width > 0 && roi.height > 0 )
+                applyRoi = true;
+            break;
+    }
+}
+
 int main(int argc, char* argv[])
 {
 //    mainCalibration(argc,argv);
@@ -25,6 +56,7 @@ int main(int argc, char* argv[])
     cv::namedWindow(DISPARITY_TEST, 0);
     cv::namedWindow(LEFT, 0);
     cv::namedWindow(RIGHT, 0);
+    cv::setMouseCallback(RIGHT, onMouse, 0);
     cv::Mat frame, vertices_frame, disparity_frame,
             frame_left, frame_right;
 
@@ -47,7 +79,10 @@ int main(int argc, char* argv[])
             frame_right.copyTo(frame_left);
             frame.copyTo(frame_right);
             vertices_frame = vertex_detection(frame);
-            disparity_frame = disparity_map(frame_left, frame_right, params);
+            std::cout << roi << '\n';
+            disparity_frame = applyRoi ?
+                    disparity_map(frame_left, frame_right, params, roi) :
+                    disparity_map(frame_left, frame_right, params);
 
             cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
             cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
@@ -59,7 +94,6 @@ int main(int argc, char* argv[])
             cv::createTrackbar( "UniquenessRatio", VERTEX_WINDOW, &params["uniquenessRatio"], 256, 0 );
             cv::createTrackbar( "SpeckleWindowSize", VERTEX_WINDOW, &params["speckleWindowSize"], 256, 0 );
             cv::createTrackbar( "SpeckleRange", VERTEX_WINDOW, &params["speckleRange"], 256, 0 );
-//            cv::createTrackbar( "Roi1", DISPARITY_TEST, &params["roi1"], 256, 0 );
 
             cv::imshow(VERTEX_WINDOW, vertices_frame);
             cv::imshow(DISPARITY_TEST, disparity_frame);

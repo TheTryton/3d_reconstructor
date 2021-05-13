@@ -8,7 +8,10 @@
 #include <map>
 
 
-cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right, std::map<std::string, int>& params){
+cv::Mat disparity_map(const cv::Mat& frame_left,
+                      const cv::Mat& frame_right,
+                      std::map<std::string, int>& params,
+                      const cv::Rect roi = cv::Rect(0,0,0,0)){
 
     cv::Mat g1, g2, disparity;
 
@@ -32,7 +35,8 @@ cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right, std
     sbm->setUniquenessRatio(params["uniquenessRatio"]);
     sbm->setSpeckleWindowSize(params["speckleWindowSize"]);
     sbm->setSpeckleRange(params["speckleRange"]);
-//    sbm->setROI1(params["roi1"]);
+    if(roi.area() > 0)
+        sbm->setROI1(roi);
 
     sbm->compute(g1, g2, disparity);
     cv::normalize(disparity, disparity, 0, 255, cv::NORM_MINMAX, CV_8U);
