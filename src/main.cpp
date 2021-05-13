@@ -4,7 +4,7 @@
 #include <cameraCalibration.h>
 #include <map>
 
-#define CAMERA  0// "http://192.168.1.112:81/stream" //(for local Webcam)
+#define CAMERA "http://192.168.0.108:81/stream" //(for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -12,7 +12,12 @@
 #define LEFT "Left"
 #define RIGHT "Right"
 
-#define FRAME_SKIP 5
+#define FRAME_SKIP 2
+
+cv::Mat REPROJECTION_ERR_MATRIX = (cv::Mat_<double>(4,4) << 1, 0, 0, 0,
+                                                            0, -1, 0, 0,
+                                                            0, 0,24*0.05 , 0,
+                                                            0, 0, 0, 1);
 
 cv::Rect roi;
 cv::Point origin;
@@ -60,15 +65,15 @@ int main(int argc, char* argv[])
     cv::Mat frame, vertices_frame, disparity_frame,
             frame_left, frame_right;
 
-    params["numDisparities"] = 1;
-    params["blockSize"] = 10;
+    params["numDisparities"] = 2;
+    params["blockSize"] = 20;
     params["filterSize"] = 15;
     params["filterCap"] = 20;
     params["minDisparity"] = 0;
     params["textureThreshold"] = 0;
     params["uniquenessRatio"] = 8;
-    params["speckleWindowSize"] = 0;
-    params["speckleRange"] = 0;
+    params["speckleWindowSize"] = 79;
+    params["speckleRange"] = 51;
 
     camera >> frame_right;
     frame_right.copyTo(frame_size);
@@ -76,35 +81,36 @@ int main(int argc, char* argv[])
     int frame_counter = 0;
     for(;;){
         if(frame_counter % FRAME_SKIP == 0) {
-            camera >> frame;
-            frame_right.copyTo(frame_left);
-            frame.copyTo(frame_right);
+        camera >> frame;
+        frame_right.copyTo(frame_left);
+        frame.copyTo(frame_right);
 
-            vertices_frame = vertex_detection(frame);
-            disparity_frame = apply_roi ?
-                              disparity_map(frame_left, frame_right, params, roi) :
-                              disparity_map(frame_left, frame_right, params);
+        vertices_frame = vertex_detection(frame);
+        disparity_frame = apply_roi ?
+                          disparity_map(frame_left, frame_right, params, roi) :
+                          disparity_map(frame_left, frame_right, params);
 
-            cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
-            cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
-            cv::createTrackbar( "NumDisparities", VERTEX_WINDOW, &params["numDisparities"], 256, 0 );
-            cv::createTrackbar( "BlockSize", VERTEX_WINDOW, &params["blockSize"], 256, 0 );
-            cv::createTrackbar( "FilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
-            cv::createTrackbar( "MinDisparity", VERTEX_WINDOW, &params["minDisparity"], 256, 0 );
-            cv::createTrackbar( "TextureThreshold", VERTEX_WINDOW, &params["textureThreshold"], 256, 0 );
-            cv::createTrackbar( "UniquenessRatio", VERTEX_WINDOW, &params["uniquenessRatio"], 256, 0 );
-            cv::createTrackbar( "SpeckleWindowSize", VERTEX_WINDOW, &params["speckleWindowSize"], 256, 0 );
-            cv::createTrackbar( "SpeckleRange", VERTEX_WINDOW, &params["speckleRange"], 256, 0 );
+        cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
+        cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
+        cv::createTrackbar( "NumDisparities", VERTEX_WINDOW, &params["numDisparities"], 256, 0 );
+        cv::createTrackbar( "BlockSize", VERTEX_WINDOW, &params["blockSize"], 256, 0 );
+        cv::createTrackbar( "FilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
+        cv::createTrackbar( "MinDisparity", VERTEX_WINDOW, &params["minDisparity"], 256, 0 );
+        cv::createTrackbar( "TextureThreshold", VERTEX_WINDOW, &params["textureThreshold"], 256, 0 );
+        cv::createTrackbar( "UniquenessRatio", VERTEX_WINDOW, &params["uniquenessRatio"], 256, nullptr );
+        cv::createTrackbar( "SpeckleWindowSize", VERTEX_WINDOW, &params["speckleWindowSize"], 256, 0 );
+        cv::createTrackbar( "SpeckleRange", VERTEX_WINDOW, &params["speckleRange"], 256, 0 );
 
-            if( (select || apply_roi) && roi.width > 0 && roi.height > 0 ){
-                cv::Mat select_rectangle(frame, roi);
-                bitwise_not(select_rectangle, select_rectangle);
-            }
+        if( (select || apply_roi) && roi.width > 0 && roi.height > 0 ){
+            cv::Mat select_rectangle(frame, roi);
+            bitwise_not(select_rectangle, select_rectangle);
+            translate_to_3d(disparity_frame, frame_right, REPROJECTION_ERR_MATRIX);
+        }
 
-            cv::imshow(VERTEX_WINDOW, vertices_frame);
-            cv::imshow(DISPARITY_TEST, disparity_frame);
-            cv::imshow(LEFT, frame_left);
-            cv::imshow(RIGHT, frame);
+        cv::imshow(VERTEX_WINDOW, vertices_frame);
+        cv::imshow(DISPARITY_TEST, disparity_frame);
+        cv::imshow(LEFT, frame_left);
+        cv::imshow(RIGHT, frame);
         }
         frame_counter++;
 
