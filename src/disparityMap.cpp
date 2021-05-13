@@ -5,9 +5,10 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include <map>
 
 
-cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right){
+cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right, std::map<std::string, int>& params){
 
     cv::Mat g1, g2, disparity;
 
@@ -21,17 +22,17 @@ cv::Mat disparity_map(const cv::Mat& frame_left, const cv::Mat& frame_right){
 
     cv::cvtColor(g1, g1, cv::COLOR_BGR2GRAY);
     cv::cvtColor(g2, g2, cv::COLOR_BGR2GRAY);
-    auto sbm = cv::StereoBM::create(32, 25);    // TODO: dynamic parametrization - toolbars and stuff
+    auto sbm = cv::StereoBM::create(16 * params["numDisparities"], params["blockSize"]);    // TODO: dynamic parametrization - toolbars and stuff
 //    auto sbm = cv::StereoBM::create(80, 5);
 //
-//    sbm->setPreFilterSize(15);
-//    sbm->setPreFilterCap(20);
-//    sbm->setMinDisparity(0);
-//    sbm->setNumDisparities(80);
-//    sbm->setTextureThreshold( 0);
-//    sbm->setUniquenessRatio( 8);
-//    sbm->setSpeckleWindowSize(0);
-//    sbm->setSpeckleRange(0);
+    sbm->setPreFilterSize(params["filterSize"]);
+    sbm->setPreFilterCap(params["filterCap"]);
+    sbm->setMinDisparity(params["minDisparity"]);
+    sbm->setTextureThreshold(params["textureThreshold"]);
+    sbm->setUniquenessRatio(params["uniquenessRatio"]);
+    sbm->setSpeckleWindowSize(params["speckleWindowSize"]);
+    sbm->setSpeckleRange(params["speckleRange"]);
+//    sbm->setROI1(params["roi1"]);
 
     sbm->compute(g1, g2, disparity);
     cv::normalize(disparity, disparity, 0, 255, cv::NORM_MINMAX, CV_8U);

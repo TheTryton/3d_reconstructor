@@ -28,6 +28,16 @@ int main(int argc, char* argv[])
     cv::Mat frame, vertices_frame, disparity_frame,
             frame_left, frame_right;
 
+    params["numDisparities"] = 1;
+    params["blockSize"] = 25;
+    params["filterSize"] = 15;
+    params["filterCap"] = 20;
+    params["minDisparity"] = 0;
+    params["textureThreshold"] = 0;
+    params["uniquenessRatio"] = 8;
+    params["speckleWindowSize"] = 0;
+    params["speckleRange"] = 0;
+
     camera >> frame_right;
 
     int frame_counter = 0;
