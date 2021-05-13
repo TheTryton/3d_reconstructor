@@ -49,7 +49,8 @@ int main(int argc, char* argv[])
             vertices_frame = vertex_detection(frame);
             disparity_frame = disparity_map(frame_left, frame_right, params);
 
-            cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterCap"], 256, 0 );
+            cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
+            cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
             cv::createTrackbar( "NumDisparities", VERTEX_WINDOW, &params["numDisparities"], 256, 0 );
             cv::createTrackbar( "BlockSize", VERTEX_WINDOW, &params["blockSize"], 256, 0 );
             cv::createTrackbar( "FilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
