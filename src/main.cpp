@@ -1,10 +1,11 @@
 
 #include <vertexDetection.h>
 #include <disparityMap.h>
-#include <cameraCalibration.h>
+#include <math.h>
 #include <map>
+#include <chrono>
 
-#define CAMERA "http://192.168.0.108:81/stream" //(for local Webcam)
+#define CAMERA "http://192.168.1.112:81/stream" //(for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -12,18 +13,35 @@
 #define LEFT "Left"
 #define RIGHT "Right"
 
+#define EPS 1e6
 #define FRAME_SKIP 2
 
-cv::Mat REPROJECTION_ERR_MATRIX = (cv::Mat_<double>(4,4) << 1, 0, 0, 0,
-                                                            0, -1, 0, 0,
-                                                            0, 0,24*0.05 , 0,
-                                                            0, 0, 0, 1);
+// TODO: make it guttt
+#define R 1234567
+#define TRAIN_HEIGHT 7654321
+
+cv::Mat REPROJECTION_ERR_MATRIX = (cv::Mat_<double>(4,4) <<  1, 0, 0, 0,
+                                                                        0, 1, 0, 0,
+                                                                        0, 0, 0, 0,
+                                                                        0, 0, 0, 1);
+
+cv::Mat T = (cv::Mat_<double>(4,4) <<   1, 0, 0, R,
+                                        0, 1, 0, TRAIN_HEIGHT,
+                                        0, 0, 1, 0,
+                                        0, 0, 0, 1);
 
 cv::Rect roi;
 cv::Point origin;
 cv::Mat frame_size;
 bool select;
 bool apply_roi = false;
+float travel_time = 0.f;
+int capture_motion = 0;
+
+static void onButton( int state, void* userData) {
+    if(state == -1)
+        capture_motion = !capture_motion;
+}
 
 // User draws box around object to track. This triggers CAMShift to start tracking
 static void onMouse( int event, int x, int y, int, void* ) {
@@ -48,6 +66,15 @@ static void onMouse( int event, int x, int y, int, void* ) {
                 apply_roi = true;
             break;
     }
+}
+
+bool equal(const cv::Mat & a, const cv::Mat & b)
+{
+    if ( (a.rows != b.rows) || (a.cols != b.cols) )
+        return false;
+    cv::Scalar s = sum( a - b );
+    //std::cout << s << '\n';
+    return (s[0] <= EPS) || (s[1] <= EPS) || (s[2] <= EPS);
 }
 
 int main(int argc, char* argv[])
@@ -79,16 +106,30 @@ int main(int argc, char* argv[])
     frame_right.copyTo(frame_size);
 
     int frame_counter = 0;
+    auto start = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
     for(;;){
         if(frame_counter % FRAME_SKIP == 0) {
-        camera >> frame;
-        frame_right.copyTo(frame_left);
-        frame.copyTo(frame_right);
+            start = end;
+            camera >> frame;
+            end = std::chrono::steady_clock::now();
+            frame_right.copyTo(frame_left);
+            frame.copyTo(frame_right);
 
-        vertices_frame = vertex_detection(frame);
-        disparity_frame = apply_roi ?
-                          disparity_map(frame_left, frame_right, params, roi) :
-                          disparity_map(frame_left, frame_right, params);
+        if (capture_motion == 1 && !equal(frame_left, frame_right)) {
+            travel_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0f;
+            vertices_frame = vertex_detection(frame);
+            disparity_frame = apply_roi ?
+                              disparity_map(frame_left, frame_right, params, roi) :
+                              disparity_map(frame_left, frame_right, params);
+
+            cv::imshow(VERTEX_WINDOW, vertices_frame);
+            cv::imshow(DISPARITY_TEST, disparity_frame);
+        }
+
+        std::cout << travel_time << '\n';
+
+        cv::createTrackbar("button", LEFT, &capture_motion, 1, 0);
 
         cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
         cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
@@ -104,11 +145,9 @@ int main(int argc, char* argv[])
         if( (select || apply_roi) && roi.width > 0 && roi.height > 0 ){
             cv::Mat select_rectangle(frame, roi);
             bitwise_not(select_rectangle, select_rectangle);
-            translate_to_3d(disparity_frame, frame_right, REPROJECTION_ERR_MATRIX);
+            //translate_to_3d(disparity_frame, frame_right, REPROJECTION_ERR_MATRIX);
         }
 
-        cv::imshow(VERTEX_WINDOW, vertices_frame);
-        cv::imshow(DISPARITY_TEST, disparity_frame);
         cv::imshow(LEFT, frame_left);
         cv::imshow(RIGHT, frame);
         }
