@@ -16,6 +16,6 @@
 #include "opencv2/calib3d/calib3d.hpp"
 
 inline float calculate_rotation_angle(const float& t, const float& T) { return t / T * 2 * 3.141592; }
-cv::Mat create_model_transform_matrix(const int& r, const int& train_height, const float& theta);
+cv::Mat create_model_transform_matrix(const cv::Mat& T, const float& theta);
 
 #endif //DATA_PROCESSOR_MATH_H

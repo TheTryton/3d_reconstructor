@@ -4,8 +4,9 @@
 #include <math.h>
 #include <map>
 #include <chrono>
+#include "opencv2/calib3d.hpp"
 
-#define CAMERA "http://192.168.1.112:81/stream" //(for local Webcam)
+#define CAMERA "http://192.168.0.101:81/stream" //(for local Webcam)
 // or something like: "http://192.168.0.111:81/stream" (for ESP32 cam)
 
 #define VERTEX_WINDOW "Vertex test"
@@ -14,21 +15,27 @@
 #define RIGHT "Right"
 
 #define EPS 1e6
-#define FRAME_SKIP 2
 
-// TODO: make it guttt
-#define R 1234567
-#define TRAIN_HEIGHT 7654321
+#define R 19.5
+#define TRAIN_HEIGHT 10.5
+#define LAP_TIME 9.134
 
-cv::Mat REPROJECTION_ERR_MATRIX = (cv::Mat_<double>(4,4) <<  1, 0, 0, 0,
-                                                                        0, 1, 0, 0,
-                                                                        0, 0, 0, 0,
-                                                                        0, 0, 0, 1);
+cv::Mat CAMERA_MATRIX = (cv::Mat_<double>(3,3) <<
+        1.2213483657167785e+03, 0,                      5.2038106031345080e+02,
+        0,                      1.2227670297198733e+03, 3.9953361672646463e+02,
+        0,                      0,                      1);
 
-cv::Mat T = (cv::Mat_<double>(4,4) <<   1, 0, 0, R,
-                                        0, 1, 0, TRAIN_HEIGHT,
-                                        0, 0, 1, 0,
-                                        0, 0, 0, 1);
+cv::Mat T = (cv::Mat_<double>(4,4) <<
+        1, 0, 0, R,
+        0, 1, 0, TRAIN_HEIGHT,
+        0, 0, 1, 0,
+        0, 0, 0, 1);
+
+cv::Mat Q = (cv::Mat_<double>(4,4) <<
+        1,  0,  0,              -5.62774048e+02,
+        0,  1,  0,              -3.84172371e+02,
+        0,  0,  0,              1.22276703e+03,
+        0,  0,  9.22664093e-01, 0);
 
 cv::Rect roi;
 cv::Point origin;
@@ -74,6 +81,7 @@ bool equal(const cv::Mat & a, const cv::Mat & b)
         return false;
     cv::Scalar s = sum( a - b );
     //std::cout << s << '\n';
+
     return (s[0] <= EPS) || (s[1] <= EPS) || (s[2] <= EPS);
 }
 
@@ -108,13 +116,15 @@ int main(int argc, char* argv[])
     int frame_counter = 0;
     auto start = std::chrono::steady_clock::now();
     auto end = std::chrono::steady_clock::now();
+    float theta = 0.f;
+    cv::Mat model_transform;
+
     for(;;){
-        if(frame_counter % FRAME_SKIP == 0) {
-            start = end;
-            camera >> frame;
-            end = std::chrono::steady_clock::now();
-            frame_right.copyTo(frame_left);
-            frame.copyTo(frame_right);
+        start = end;
+        camera >> frame;
+        end = std::chrono::steady_clock::now();
+        frame_right.copyTo(frame_left);
+        frame.copyTo(frame_right);
 
         if (capture_motion == 1 && !equal(frame_left, frame_right)) {
             travel_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0f;
@@ -123,13 +133,18 @@ int main(int argc, char* argv[])
                               disparity_map(frame_left, frame_right, params, roi) :
                               disparity_map(frame_left, frame_right, params);
 
+            theta = calculate_rotation_angle(travel_time, LAP_TIME);
+            model_transform = create_model_transform_matrix(T, theta);
+            //translate_to_3d and and points to model
+
             cv::imshow(VERTEX_WINDOW, vertices_frame);
             cv::imshow(DISPARITY_TEST, disparity_frame);
+            frame_counter++;
         }
 
-        std::cout << travel_time << '\n';
+        std::cout << "Travel time: " << travel_time << '\n';
 
-        cv::createTrackbar("button", LEFT, &capture_motion, 1, 0);
+        cv::createTrackbar("button", RIGHT, &capture_motion, 1, 0);
 
         cv::createTrackbar( "PreFilterSize", VERTEX_WINDOW, &params["filterSize"], 256, 0 );
         cv::createTrackbar( "PreFilterCap", VERTEX_WINDOW, &params["filterCap"], 63, 0 );
@@ -150,8 +165,7 @@ int main(int argc, char* argv[])
 
         cv::imshow(LEFT, frame_left);
         cv::imshow(RIGHT, frame);
-        }
-        frame_counter++;
+        std::cout << "Frame count: " << frame_counter << '\n';
 
         char keyboardInput = (char) cv::waitKey(10);
         if(keyboardInput == 27)

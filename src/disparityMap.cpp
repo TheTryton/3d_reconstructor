@@ -7,7 +7,6 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include <map>
 #include <disparityMap.h>
-#include <CGAL/IO/write_ply_points.h>
 #include <fstream>
 #include <algorithm>
 
@@ -46,16 +45,17 @@ cv::Mat disparity_map(const cv::Mat& frame_left,
     return disparity;
 }
 
+// TODO:
+//  Change CGAL to o3d
+//  Change Point class (CGAL)
 
 std::vector<Point> translate_to_3d(const cv::Mat& disparity,
                                    const cv::Mat& frame,
-                                   const cv::Mat& camera_matrix){
+                                   const cv::Mat& model_transform,
+                                   const cv::Mat& Q){
 
-    // Not working
     cv::Mat point_cloud;
-    std::cout << "Counting!\n";
-    cv::reprojectImageTo3D(disparity, point_cloud, camera_matrix);
-    std::cout << "Done!\n";
+    cv::reprojectImageTo3D(disparity, point_cloud, model_transform * Q);
 
     double min, max;
     cv::minMaxLoc(point_cloud, &min, &max);
@@ -68,18 +68,5 @@ std::vector<Point> translate_to_3d(const cv::Mat& disparity,
                 //colors.push_back(Point(row, col, frame.at<int>(row,col)));
             }
 
-    auto max_point = std::max_element(points.begin(),
-                                      points.end(),
-                                      [](auto& lhs, auto& rhs)
-                                        { return lhs.z() < rhs.z(); } );
-    max = max_point->z();
-
-    for(size_t i = 0; i < points.size(); ++i) {
-        Point point = points[i];
-        points[i] = Point(point.x(), point.y(), point.z() / max * 640);
-    }
-
-    std::ofstream test("test.ply");
-    CGAL::write_ply_points(test, points);
     return points;
 }
